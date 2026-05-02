@@ -1,0 +1,11 @@
+# Active writer-batch sentinel — created at dispatch time, removed at batch close
+.claude/active_writer_batch.json
+
+# Local Claude Code settings (per-machine)
+.claude/settings.local.json
+
+# Scheduled task lock
+.claude/scheduled_tasks.lock
+
+# OS noise
+.DS_Store

@@ -1,0 +1,134 @@
+---
+name: section-deal-loop
+description: Phase 5 — iterate one section through critique rounds until AGREED. Use after a writer has just produced a draft (or revised one) and the section is at `workflow_status: draft` or `reviewing`. Asymmetric by writer model — Path A for cc-drafted (bidirectional codex-collaborator every round), Path B for codex-drafted (main-as-conflictor rounds 1..N-1, codex-collaborator final-round sanity pass at round N). Handles the four named bias axes, gemini factual spot-check, CONTESTED pushback, and Rule 3d writer-side break.
+---
+
+# section-deal-loop — Phase 5 per-section iteration
+
+Verbose spec: `_workflow/pipeline_design.md` Phase 5 + §5 + §8.
+
+## Preconditions
+
+- The section file exists at the assigned path with `workflow_status: draft` or `reviewing`.
+- The chapter plan records the writer assignment (cc-writer or codex-writer) for this section. **Locked at Phase 3 — do not reassign mid-loop.**
+
+## Path selection
+
+Read the chapter plan's writer assignment for this section.
+
+- **cc-writer drafted → Path A.**
+- **codex-writer drafted → Path B.**
+
+---
+
+## Path A — cc-drafted sections (bidirectional every round)
+
+Main session and codex-collaborator iterate every round under the §8 convergence protocol.
+
+### Round 1
+
+Dispatch `codex-collaborator MODE: CONFLICT, ROUND: 1` with:
+- The full draft contents
+- Your reasoning (what tradeoffs the writer made, what you think is strong / weak)
+
+Codex returns 3–6 ordered objections, ending with `STILL DISAGREEING:` or (rarely round 1) `AGREED:`.
+
+### Round N+1
+
+For each codex critique, decide:
+
+- **Apply** → re-dispatch the writer (cc-writer) with a one-section revision sentinel and a brief that says "revise per these critique IDs". Do not main-direct edit unless it's `writer-overhead` (spelling / dup word / broken Markdown / format artifact — no semantic changes).
+- **Push back** → end your turn with `CONTESTED: <critique-id> — <category>: <one-line>`. Categories: `already-satisfied`, `technically-wrong`, `pedagogically-worse`, `out-of-scope`, `over-budget`, `chapter-context`. Codex's next round must answer this before introducing new objections.
+
+After applying / contesting, dispatch `codex-collaborator MODE: CONFLICT, ROUND: <N+1>, RESUME: true` with the diff and your responses.
+
+Continue until codex returns `AGREED:` AND you have no outstanding `CONTESTED:`.
+
+### On AGREED
+
+Update frontmatter to `workflow_status: reviewing` (it stays at `reviewing` until Phase 6 chapter voice pass — do not flip to `complete` here).
+
+```bash
+git add <section-path>
+git commit -m "agreed(<chapter>/<section>): per-section deal-loop complete"
+```
+
+---
+
+## Path B — codex-drafted sections (asymmetric)
+
+Main session is the conflictor for rounds 1..N-1; codex-collaborator does the final-round sanity pass at round N.
+
+### Rounds 1..N-1 (main as conflictor, unilateral)
+
+For each round, write your own critique covering the standard checks (clarity, accuracy, terminology, scope creep, handoff fidelity) **plus the four named bias axes** (Rule 3c — must explicitly enumerate which axes, if any, this round flagged):
+
+- **markdown over-listing** — over-reliance on bullet lists where prose would serve better
+- **analogy register** — analogies fit for the reader's background, not model-typical-mismatched
+- **foundational example choice** — entry-level examples illustrative vs overly-abstract / overly-applied
+- **depth defaults** — explanation depth matches the chapter plan's depth band
+
+If any critique remains, re-dispatch codex-writer with a one-section revision sentinel and a brief saying "revise per these critique IDs". Do not main-direct edit.
+
+If no critiques remain, advance to the final-round sanity pass.
+
+#### CONTESTED in Path B
+
+Path B has no second adversary in rounds 1..N-1, so `CONTESTED:` does not apply. It applies only at the final round and beyond.
+
+#### Rule 3b — gemini factual spot-check (content-risk-triggered)
+
+If round 1 commits substantive factual claims, OR a subsequent revision **adds or materially changes** factual claims, dispatch `gemini-researcher` to verify 2–3 specific claims. Wait for verification clean before advancing toward AGREED. Do NOT auto-rerun per round — trigger is content-risk, not round-number.
+
+### Round N — codex-collaborator final-round sanity pass
+
+Dispatch `codex-collaborator MODE: CONFLICT, ROUND: <N>` (fresh thread or `RESUME: true` per section) with:
+- The full final draft
+- A brief noting "this is the final-round sanity pass; main session has already iterated N-1 rounds and finds no remaining critique"
+
+Codex returns either:
+
+- **AGREED:** → on to commit.
+- **STILL DISAGREEING:** with critiques → handle per the §3 final-round re-review loop:
+  - **(a) Re-dispatch codex-writer to fix**, then dispatch codex-collaborator for **another final-round pass on the changed text**. Loop until codex-collaborator AGREES on the actual final commit.
+  - **(b) Push back via `CONTESTED:`** — bidirectional from this point.
+
+The fix-then-AGREED-without-re-review path is **closed**. Convergence requires codex-collaborator AGREED on the actual final commit.
+
+### On AGREED
+
+Update frontmatter to `workflow_status: reviewing`.
+
+```bash
+git add <section-path>
+git commit -m "agreed(<chapter>/<section>): per-section deal-loop complete"
+```
+
+---
+
+## Rule 3d — late-round writer-side break (Path B only)
+
+If a codex-drafted section reaches **round 4 or beyond** and the residual disagreement is editorial (framing / analogy / depth, not facts), main session may dispatch a **targeted cc-writer fresh-eye revision** on the disputed passage only.
+
+**"Same critique" trigger** (must hold across all 3+ rounds):
+- Same passage (line-anchored)
+- Same unresolved defect (not a paraphrase that introduces a different requested outcome)
+- Same requested outcome
+- **Persistent critique IDs** (e.g. `5.X-r2-c3` reused at rounds 2/3/4) — required, not gameable by varying phrasing
+
+If the trigger fires, dispatch cc-writer with a tightly-scoped brief: "revise the following N paragraphs against main's round-N critique with the chapter plan as rubric". One-section revision sentinel. After cc-writer returns, resume the codex deal-loop on the changed passage.
+
+## Update STATE.md
+
+After each AGREED:
+- `last_agreed_commit: <new sha>`
+- Update `next_action` to point at the next section in the batch (or, if last in batch, to `draft-batch` for the next batch / `close-chapter` if all batches done).
+
+## Anti-patterns
+
+- Do NOT main-direct edit section content for anything beyond `writer-overhead`. Re-dispatch the writer.
+- Do NOT skip the final-round sanity pass on Path B even if you think the draft is perfect.
+- Do NOT auto-rerun gemini per round — content-risk trigger only.
+- Do NOT flip `workflow_status` to `complete` here. That happens only at Phase 6 chapter voice pass (`close-chapter` skill).
+- Do NOT mix Path A and Path B logic. Read the chapter plan's writer assignment first.
+- Do NOT reassign writer mid-loop. Allocation locked at Phase 3.

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Per-machine Claude Code settings. Copy to .claude/settings.local.json (which is git-ignored) and edit to taste. This file is an EXAMPLE; the real settings.local.json is not committed so each contributor can have their own.",
+
+  "_comment_plugins": "OPTIONAL — enable Claude Code plugins that the scaffold can use but does not require. The 'obsidian@obsidian-skills' plugin adds the obsidian:* skills (obsidian-markdown, obsidian-cli, json-canvas, obsidian-bases, defuddle), useful when you author your book inside an Obsidian vault. Skip this entire block if you don't use Obsidian.",
+  "enabledPlugins": {
+    "obsidian@obsidian-skills": true
+  },
+
+  "_comment_permissions": "OPTIONAL — pre-allow the routine Codex / Gemini Bash invocations so Claude Code does not prompt for approval on every dispatch. Without these, you'll get a permission prompt the first time each subagent runs in the session.",
+  "permissions": {
+    "allow": [
+      "Bash(node /Users/<your-username>/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs task *)",
+      "Bash(gemini -p:*)"
+    ]
+  }
+}
