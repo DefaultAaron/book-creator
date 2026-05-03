@@ -180,7 +180,7 @@ Underscore-prefixed top-level folders (`_workflow/`, `_templates/`, `_assets/`) 
 
 | Role | Runtime | Writes? | Job |
 |---|---|---|---|
-| **Main session** | Claude Code (you) | sole authority for `CLAUDE.md`, `README.md`, top-level meta files, TOC, chapter overviews, final commits | Orchestrator + conflictor for codex-drafts (Phase 5 Path B rounds 1..N-1) |
+| **Main session** | Claude Code (you) | yes — meta files (`CLAUDE.md`, `README.md`, TOC, chapter overviews), section frontmatter flips on Phase-5/6 AGREED, and `main-direct: writer-overhead` edits to section content (rare) | Orchestrator + conflictor for codex-drafts (Phase 5 Path B rounds 1..N-1) |
 | **`codex-collaborator`** | codex-companion, no `--write` | no | Dual-mode `RESEARCH \| CONFLICT`. Conflictor for cc-drafts every round; final-round sanity pass on codex-drafts |
 | **`gemini-researcher`** | Gemini CLI, `--approval-mode plan` | no | Research only + content-risk-triggered factual spot-check |
 | **`cc-writer`** | Claude Code subagent (Read/Write/Edit, no Bash) | yes — only the batch-assigned section path, hook-enforced | Drafts AND revises one section file per dispatch in the main repo |

@@ -2,21 +2,25 @@
 title: Workflow state snapshot
 doc_type: state-snapshot
 state_kind: manual_snapshot
-last_updated: 2026-05-03T03:56:27.479Z
-last_checked_commit: c7399644925bc83cd27ded4bf278205e81b66b7a
+last_updated: <not yet seeded>
+last_checked_commit: <not yet seeded>
 generated_from: scaffold
 ---
 
 # Workflow state snapshot
 
 > [!warning] NOT a source of truth
-> This file is a fast-recovery snapshot for resuming work after `/compact` or `/clear`. Verify against `git log` and section-file frontmatter before acting on anything below. Mechanical fields (`last_updated`, `last_checked_commit`, `last_known_head`, `worktree_status`, `active_batch_sentinel`) are auto-refreshed by `.claude/hooks/snapshot_state.mjs` on `PreCompact`. Reasoning fields below are manually maintained by main session at each AGREED commit, each WIP commit, and at session end.
+> This file is a fast-recovery snapshot for resuming work after `/compact` or `/clear`. Verify against `git log` and section-file frontmatter before acting on anything below.
+>
+> **Mechanical fields shipped as `<not yet seeded>`.** They are auto-refreshed by `.claude/hooks/snapshot_state.mjs` on `PreCompact` — i.e. when context compaction runs (typically `/compact`). They will show placeholders until that first `PreCompact` event triggers the snapshot. We do NOT seed them at `bootstrap` time, because the seeding commit itself would change `HEAD` and immediately re-stale `last_known_head` — placeholders are more honest than fresh-but-stale values.
+>
+> Reasoning fields below (`active_chapter`, `active_phase`, `active_batch`, `last_agreed_commit`, `next_action`, `open_conflict_threads`, `blocked_user_inputs`, `do_not_redo`) are manually maintained by main session at each AGREED commit, each WIP commit, and at session end.
 
 ## Mechanical state (auto-refreshed by PreCompact hook)
 
-- last_known_head: `c7399644925bc83cd27ded4bf278205e81b66b7a`
-- worktree_status: dirty (main: 21 entries); codex worktree not initialized
-- active_batch_sentinel: null
+- last_known_head: <not yet seeded>
+- worktree_status: <not yet seeded>
+- active_batch_sentinel: <not yet seeded>
 
 ## Reasoning state (main session updates manually)
 

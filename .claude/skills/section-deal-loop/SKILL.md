@@ -19,6 +19,8 @@ Verbose spec: `_workflow/pipeline_design.md` Phase 5 + §5 + §8.
 
 Every revision (Path A every round, Path B rounds 1..N-1, Path B final-round fix, Rule 3d cc-writer fresh-eye) goes through the same dispatch shape as Phase 4 — just with a one-section sentinel instead of a batch. **Reuse this procedure verbatim** every time a writer dispatch is invoked from this skill.
 
+**Frontmatter invariant:** the writer leaves `workflow_status: draft` unchanged on every revision in this loop. Main session flips it to `reviewing` ONLY at the per-Path "On AGREED" step below — once per section, not once per revision.
+
 1. **Clean-state check (HARD).** `git status --porcelain` must be empty. If dirty, ABORT.
 2. **Worktree hygiene** (codex-writer revisions only): `git -C "$WORKTREE" merge --ff-only $(git symbolic-ref --short HEAD 2>/dev/null || git branch --show-current)` and verify `git -C "$WORKTREE" status --porcelain` is empty. `WORKTREE="${BOOK_CREATOR_CODEX_WORKTREE:-$(cd .. && pwd)/$(basename "$(pwd)")-codex-worktree}"`.
 3. **Capture pre-revision SHA**: `PRE_REVISION_SHA=$(git rev-parse HEAD)`.
