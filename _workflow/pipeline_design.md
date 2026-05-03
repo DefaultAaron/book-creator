@@ -90,7 +90,7 @@ Three streams in parallel for the chapter scope:
 - `gemini-researcher` dispatched with the chapter scope, returns the three-block format.
 - `codex-collaborator MODE: RESEARCH` dispatched with the same scope, returns the same.
 
-Main session integrates the three into a single research synthesis at `_workflow/research/<chapter_slug>_synthesis.md`. Per-section research (escalating to additional dispatches) is allowed only when a section's sourcing demands depth not covered by the chapter pass.
+Main session integrates the three into a single research synthesis at `_workflow/research/<N>_<chapter_slug>_synthesis.md` (canonical: same `<N>_<chapter_slug>` stem as the chapter folder, so research, plan, briefs, and chapter folder all share one key). Per-section research (escalating to additional dispatches) is allowed only when a section's sourcing demands depth not covered by the chapter pass.
 
 ### Phase 2 — Research deal-loop
 
@@ -103,7 +103,7 @@ Convergence per §8. Structural proposals are *proposed-not-adopted*: after the 
 
 ### Phase 3 — Chapter plan + allocation deal-loop
 
-Main session drafts a **chapter plan** at `_workflow/plans/<chapter_slug>_chapter_plan.md`, covering at minimum the following items (treat the list as a **recommended structure, not a fixed count** — items may be merged, split, or skipped based on chapter character; the codex CONFLICT review must explicitly ratify any item omitted):
+Main session drafts a **chapter plan** at `_workflow/plans/<N>_<chapter_slug>_chapter_plan.md` (canonical: same `<N>_<chapter_slug>` stem as the chapter folder), covering at minimum the following items (treat the list as a **recommended structure, not a fixed count** — items may be merged, split, or skipped based on chapter character; the codex CONFLICT review must explicitly ratify any item omitted):
 
 1. **Section list** — file names, slugs, scope-in / scope-out, target depth, length band.
 2. **Section dependency DAG** — which sections must precede which.
@@ -127,9 +127,10 @@ Drafting does not begin until the plan reaches AGREED.
 
 ### Phase 4 — Per-section drafting (parallel where independent)
 
-For each batch of independent sections in the DAG:
+For each batch of independent sections in the DAG (this list is authoritative; the `draft-batch` skill encodes it as procedural steps 0–13):
 
-1. Main session builds a **section brief** per section (saved at `_workflow/briefs/<chapter>_<section>_brief.md`). The brief fixes framing up front, not just scope:
+1. Main session enforces the **full-repo clean-state precondition** (§6.1): runs `git status --porcelain` on the entire repo. If non-empty, aborts and asks user to commit/stash before continuing. This check runs **before** brief authoring so the about-to-be-written brief files do not false-positive it.
+2. Main session builds a **section brief** per section (saved at `_workflow/briefs/<chapter>_<section>_brief.md`). The brief fixes framing up front, not just scope:
    - Book context paragraph (from outline) + chapter context paragraph (from chapter plan)
    - Section scope (in / out / depth / length band)
    - Research synthesis excerpt relevant to this section
@@ -139,14 +140,19 @@ For each batch of independent sections in the DAG:
    - **Terminology contract** — which must-preserve terms (from plan item 9) appear in this section and exactly how they are spelled / cased / glossed
    - Format requirements (plain Markdown, frontmatter pattern, callouts, link conventions)
    - **Path constraint**: the exact section file path the writer is allowed to write
-2. Main session enforces the **full-repo clean-state precondition** (§6.1): runs `git status --porcelain` on the entire repo. If non-empty, aborts and asks user to commit/stash before continuing.
-3. Main session writes the **batch sentinel** (§6.2) at `.claude/active_writer_batch.json` listing the assigned section paths for this batch — exact paths, not patterns. This is what the PreToolUse hook reads.
-4. Main session dispatches all writers in the batch in a single message — multiple `Agent` tool calls in parallel, alternating cc-writer and codex-writer per the allocation ratio.
+3. Main session **commits the briefs** as a single `wip(<chapter>): batch <K> briefs` commit and re-verifies clean state. Without this commit, the sentinel-write step operates on a dirty tree.
+4. **Worktree hygiene** (only if any codex-writer is in this batch): ff the codex worktree to current main HEAD; verify worktree clean. Aborts otherwise.
+5. **Capture pre-batch SHA**: `PRE_BATCH_SHA=$(git rev-parse HEAD)`. Required for §6.4 post-batch validation and §6.5 stale-sentinel recovery.
+6. Main session writes the **batch sentinel** (§6.2) at `.claude/active_writer_batch.json` listing the assigned section paths for this batch — exact paths, not patterns. The sentinel JSON also carries `pre_batch_sha` and `dispatched_at` for §6.5 crash recovery. This is what the PreToolUse hook reads.
+7. Main session dispatches writers — **cc-writers in parallel** (one parallel `Agent` call covering all cc-writers), **codex-writers serialized within the batch** because they share `--cwd "$WORKTREE"` and codex-companion does not isolate concurrent task calls per dispatch. The first codex-writer may run alongside the cc-writer parallel call; subsequent codex-writers wait until the previous one returns.
    - cc-writer dispatches operate in the main repo; the PreToolUse hook reads the sentinel and rejects writes to any path not in it.
-   - codex-writer dispatches operate in the **isolated worktree** at `../<repo-name>-codex-worktree` (§6.3); main session sets the worktree branch fresh-from-main and dispatches with `--cwd` pointing at the worktree.
-5. Each writer creates the assigned section file with frontmatter `workflow_status: draft` and prose body, writes only to the path given in the brief, returns to main session a short manifest: file path written, line count, any open questions for the deal-loop.
-6. **Post-batch validation** (§6.4): main session computes the change set, classifies against the batch sentinel allowlist, applies structured revert / removal for any out-of-scope events, and removes the sentinel.
-7. For codex-writer: after worktree-side writing succeeds, main session **copies only the assigned section path** from the worktree into the main repo and stages it for the WIP commit.
+   - codex-writer dispatches operate in the **isolated worktree** at `${BOOK_CREATOR_CODEX_WORKTREE:-../<repo-name>-codex-worktree}` (§6.3); main session sets the worktree branch fresh-from-main and dispatches with `--cwd` pointing at the worktree.
+8. Each writer creates the assigned section file with frontmatter `workflow_status: draft` and prose body, writes only to the path given in the brief, returns to main session a short manifest: file path written, line count, any open questions for the deal-loop. For codex-writer: main session then **copies only the assigned section path** from the worktree into the main repo (`cp $WORKTREE/<assigned-path> ./<assigned-path>`).
+9. **Post-batch structured validation** (§6.4): main session computes the change set against `PRE_BATCH_SHA`, classifies against the batch sentinel allowlist, applies file-by-file `git restore --source=$PRE_BATCH_SHA` for out-of-scope modifications and `rm` for out-of-scope new files. Because the restore/rm leaves no diff, each revert is logged as a row appended to `_workflow/validation_log.md`, which is then committed with a `revert(<chapter>/<section>)` prefix. Skip the commit entirely if no out-of-scope events occurred.
+10. **Commit in-scope writes**: one `wip(<chapter>/<section>): <writer> round 1 draft` commit per section.
+11. **Reset the codex worktree** (only if any codex-writer ran): `git -C $WORKTREE reset --hard $MAIN_BRANCH && git -C $WORKTREE clean -fd`. Without this, the next batch's worktree-hygiene step (4) sees a dirty tree and aborts. Destructive only inside the sacrificial worktree.
+12. **Remove the sentinel**: `rm .claude/active_writer_batch.json`. The path-scope hook becomes permissive again.
+13. **Update STATE.md**: `active_batch: none — Batch <K> just closed; next_action: section-deal-loop on each section.`
 
 Dependent sections wait for predecessors to reach `workflow_status: complete` (or at minimum `workflow_status: reviewing` with stable terminology) before their writers are dispatched.
 
@@ -181,7 +187,7 @@ Plus: clarity, accuracy, depth match, handoff fidelity, scope creep.
 
 A vague "check for codex-style bias" is insufficient; main's critique must explicitly enumerate which of the four axes (if any) the round flagged.
 
-**Revisions go through writer dispatch — drafts AND revisions.** Re-dispatch the original writer (cc-writer for cc-drafted, codex-writer for codex-drafted) with the critique notes as the brief. The writer edits the same file in place (or in the worktree, for codex-writer), and updates frontmatter to `workflow_status: reviewing` after the first revision. The writer dispatch is wrapped with a one-section revision sentinel (same `.claude/active_writer_batch.json` shape as a Phase-4 batch sentinel, but listing only the single section path) so the path-scope hook still gates the write.
+**Revisions go through writer dispatch — drafts AND revisions.** Re-dispatch the original writer (cc-writer for cc-drafted, codex-writer for codex-drafted) with the critique notes as the brief. The writer edits the same file in place (or in the worktree, for codex-writer). The writer always **leaves frontmatter at `workflow_status: draft`** — even on revisions. **Only main session flips `draft → reviewing`, and only on Phase 5 AGREED.** This makes status ownership unambiguous: `draft` means "writer-touched, not yet AGREED"; `reviewing` means "Phase 5 AGREED, awaiting Phase 6 voice pass". The writer dispatch is wrapped with a one-section revision sentinel (same `.claude/active_writer_batch.json` shape as a Phase-4 batch sentinel, but listing only the single section path) so the path-scope hook still gates the write.
 
 The only main-direct exception for section content is `main-direct: writer-overhead`, with a tightly narrow definition:
 
@@ -215,9 +221,9 @@ Frontmatter `workflow_status` field tracks lifecycle:
 | Value | Meaning |
 |---|---|
 | `planned` | Section exists in the chapter plan but no file yet. (TOC stub only.) |
-| `draft` | Writer just produced first version. Not yet critiqued. |
-| `reviewing` | One or more deal-loop revisions applied. Not yet AGREED at chapter level. |
-| `complete` | Chapter voice pass AGREED, section is published. |
+| `draft` | Writer-touched, not yet AGREED at Phase 5. **Includes mid-deal-loop revisions** — only main session flips off `draft`, and only on Phase-5 AGREED. |
+| `reviewing` | Phase 5 AGREED on this section; awaiting the chapter voice pass (Phase 6). Eligible to act as a predecessor for downstream Phase-4 batches as long as terminology is stable. |
+| `complete` | Phase 6 chapter voice pass AGREED, section is published. |
 
 The field stays on the file indefinitely (no stripping). If the user later builds an export pipeline, that pipeline strips it at export time. A missing field on a section file means "unknown / legacy" and triggers a check before any deal-loop runs.
 
@@ -265,7 +271,7 @@ Hook script: `.claude/hooks/check_writer_path_scope.mjs`.
 
 codex-writer **never operates in the main repo working tree**. Instead:
 
-- One-time setup: `git worktree add ../<repo-name>-codex-worktree codex-writer-isolated` creates a sacrificial worktree on a long-lived branch. (The agent files derive `<repo-name>` from the current working directory's basename.)
+- One-time setup: `git worktree add ../<repo-name>-codex-worktree codex-writer-isolated` creates a sacrificial worktree on a long-lived branch. The agent files derive `<repo-name>` from the current working directory's basename. The location is overridable via the `BOOK_CREATOR_CODEX_WORKTREE` environment variable (read by `bootstrap`, `draft-batch`, the snapshot hook, and the `codex-writer` agent); the override is recommended when two book projects on disk share a basename or the worktree needs to live elsewhere.
 - Before each codex-writer dispatch:
   1. Main session ensures the worktree branch is fast-forwarded from the main branch (`git -C ../<repo-name>-codex-worktree merge --ff-only <main-branch>`; if conflicts, abort and surface to user).
   2. Verifies the worktree is clean (`git -C ../<repo-name>-codex-worktree status --porcelain` is empty); if not, aborts.
@@ -273,7 +279,8 @@ codex-writer **never operates in the main repo working tree**. Instead:
 - codex-writer writes inside the worktree, returns its manifest.
 - Main session copies **only the assigned section file path** from the worktree to the main repo (e.g., `cp ../<repo-name>-codex-worktree/<path> ./<path>`), then `git add` and commit in main with the `wip(...)` prefix.
 - Out-of-scope writes inside the worktree (anywhere outside the assigned section path) are discarded and never touch main; they are still flagged in that section's deal-loop.
-- Periodically (e.g., end of chapter), the worktree branch can be reset to discard accumulated WIP: `git -C ../<repo-name>-codex-worktree reset --hard <main-branch>`. **This `reset --hard` is destructive only inside the sacrificial codex worktree, never in the main repo.**
+- **After every codex-writer batch (and every Phase-5 codex-writer revision), the worktree is reset back to `<main-branch>`**: `git -C ../<repo-name>-codex-worktree reset --hard <main-branch>` plus `git -C ... clean -fd`. The copyback already moved the in-scope content into main; the worktree-side debris is otherwise unsafe to leave between dispatches because the next worktree-hygiene step (`merge --ff-only`) will refuse to run on a dirty tree. **`reset --hard` is destructive only inside the sacrificial codex worktree, never in main.**
+- **codex-writer dispatches within a batch are serialized.** All codex-writers share the same `--cwd` worktree; codex-companion does not isolate concurrent task calls (no per-dispatch tmp namespace, no git-index lock at the writer level). Two parallel codex-writer calls in the same worktree can race on temp files, partial reads of sibling sections, or accumulator caches inside Codex itself. **`draft-batch` step 7** dispatches codex-writers one at a time and only allows cc-writers to run alongside the first codex-writer (cc-writers don't share the worktree, so they're parallel-safe with each other and with one codex-writer). Post-batch validation (§6.4) is still the durable safety layer; serialization removes the race-condition surface so validation has only one writer's output to classify per dispatch.
 
 ### 6.4 Post-batch structured validation (belt-and-suspenders)
 
@@ -283,13 +290,32 @@ After each writer batch returns and before the deal-loop opens, main session run
 - Classify each modified path against the batch sentinel allowlist
 - In-scope modifications: keep
 - Out-of-scope modified files: `git restore --source=$PRE_BATCH_SHA -- <path>` (file-specific, never blanket)
-- Out-of-scope untracked files: `rm` (and log)
+- Out-of-scope untracked files: `rm`
 - Renames or deletions of existing files: forbidden; revert original from `$PRE_BATCH_SHA`, remove the new path
 - Any out-of-scope event flagged in the offending writer's per-section deal-loop
 
+**Audit trail.** Reverts leave no diff to commit (restoring cancels the modification; removing untracked files produces no tracked change). Append one row per revert to `_workflow/validation_log.md` (columns: timestamp, pre_batch_sha, writer, section, reverted_path, classification, note), then commit the log with the `revert(<chapter>/<section>)` prefix. The log file is the audit artifact; the commit prefix preserves filterability via `git log --grep '^revert('`. If no out-of-scope events occurred, skip — no log entry, no commit.
+
 Because §6.1 guarantees a clean repo at dispatch time, there is no pre-existing dirty state for these reverts to collide with.
 
-### 6.5 Forbidden zones (both writers)
+### 6.5 Stale-sentinel recovery (when a session is killed mid-dispatch)
+
+If main session crashes / is killed / is `/clear`'d while a Phase-4 batch or Phase-5 revision is in flight, the sentinel at `.claude/active_writer_batch.json` may persist after the writer's run is no longer running. The path-scope hook then blocks future Write/Edit calls outside the abandoned allowlist. STATE.md only captures `active_batch_sentinel` on `PreCompact`, so its snapshot may be stale.
+
+To make recovery deterministic:
+
+- The sentinel JSON carries `pre_batch_sha` (or `pre_revision_sha`) plus `dispatched_at` (ISO timestamp) in addition to `allowed_paths`. Producers (`draft-batch` step 6, `section-deal-loop` revision step 4) write all three.
+- On any session resume that observes a stale sentinel (`SessionStart` reminder + `STATE.md` recovery checklist item 5 trigger):
+  1. Read the sentinel; capture the SHA and allowed paths.
+  2. Compute the change set in **both** main and (if codex-writer was in scope) the worktree, against the saved SHA. Use `git diff --name-only <pre-sha>` plus `git ls-files --others --exclude-standard`.
+  3. **Classify each repo's diffs separately**: in-allowlist or out-of-allowlist. A successful pre-crash codex-writer typically leaves the worktree dirty with the in-scope section file — that is **not** an abort signal; it is recoverable state to copy back.
+  4. **If both repos' diffs are entirely in-allowlist** (in either repo, or split: e.g. the section file in the worktree, nothing in main) — copy back the codex-writer outputs (per §6.3), then resume the post-batch validation step (`draft-batch` step 9 / revision step 7) and continue forward to commit + worktree-reset + sentinel-remove.
+  5. **If either repo has out-of-allowlist diffs** — treat as an abort. Run the §6.4 reverts file-by-file from `pre-sha` for the out-of-scope writes (in main), discard the worktree side per §6.3 (`reset --hard <main-branch> + clean -fd`), then remove the sentinel.
+  6. **If both repos are empty** — the dispatch never wrote anything. Just `rm .claude/active_writer_batch.json` and update STATE.md.
+
+The sentinel is the on-disk authority. Do not infer recovery state from STATE.md alone.
+
+### 6.6 Forbidden zones (both writers)
 
 Regardless of layer, both writers are forbidden from touching:
 - `CLAUDE.md`, `README.md`, top-level book-meta files (`00_table_of_contents.md`, etc.)
@@ -379,15 +405,20 @@ Reasoning fields (`active_chapter`, `active_phase`, `active_batch`, `last_agreed
 
 A `SessionStart` hook (matchers `clear` + `compact`) emits a one-line reminder to read STATE.md after context loss.
 
-## 11. Initial setup (one-time, per book project)
+## 11. Initial setup (one-time, per book project) — run via the `bootstrap` skill
+
+The `bootstrap` skill is the **single sanctioned entry point** for first-run setup. It performs eight checks: initial scaffold commit, default-branch detection, codex-worktree path resolution + creation, codex `--cwd` isolation smoke-test, hook verification, Gemini reachability, optional permissions, and writing `.claude/bootstrap_complete.json`. `new-book` and `new-chapter` both gate on the marker file's existence — they refuse to run if bootstrap was skipped, so the smoke-test cannot be bypassed.
+
+Steps the user runs **outside** Claude Code:
 
 1. Clone or copy this scaffold into a new repo named after the book project (or topic).
-2. Initialize git: `git init && git add . && git commit -m "scaffold: book-creator pipeline"`.
-3. Create the codex-writer worktree:
-   ```bash
-   git worktree add ../$(basename "$(pwd)")-codex-worktree -b codex-writer-isolated
-   ```
-4. Open Claude Code in the repo root and give it a topic. Phase 0 will run.
+2. (Optional) `rm -rf .git && git init` if you want a fresh history rather than the upstream's.
+3. (Optional) Export `BOOK_CREATOR_CODEX_WORKTREE=<absolute-path>` and/or `BOOK_CREATOR_GEMINI_MODEL=<model-id>` in your shell before starting Claude Code so bootstrap inherits the override.
+
+Steps inside Claude Code:
+
+4. Invoke the `bootstrap` skill (or just say "set things up"). It performs the eight one-time checks and writes the marker file at `.claude/bootstrap_complete.json` only after every check passes.
+5. Then give Claude a topic. `new-book` runs Phase 0, refusing to start if the marker file is missing.
 
 ## 12. Why this is worth doing
 

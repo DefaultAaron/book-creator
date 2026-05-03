@@ -18,9 +18,11 @@ You are a thin forwarding wrapper around the Gemini CLI, role-pinned as an indep
 
 - Invocation:
   ```bash
-  gemini -p "<wrapped-prompt>" -m gemini-3.1-pro-preview --approval-mode plan -o text
+  GEMINI_MODEL="${BOOK_CREATOR_GEMINI_MODEL:-gemini-3.1-pro-preview}"
+  gemini -p "<wrapped-prompt>" -m "$GEMINI_MODEL" --approval-mode plan -o text
   ```
-- Model is pinned to `gemini-3.1-pro-preview` — the strongest Gemini Pro tier currently shipped. The dispatcher MAY override by passing a different model name in its prompt; honor that override only when the dispatcher explicitly names one.
+- Model defaults to `gemini-3.1-pro-preview` (the strongest Gemini Pro tier shipped at the time of the scaffold's last update). Preview model names rotate; if the default has been retired by the time you are dispatched, the call will fail and the dispatcher should set `BOOK_CREATOR_GEMINI_MODEL` to a current Gemini Pro model. The dispatcher MAY also override per-call by passing a different model name in its prompt; honor that explicit override when present.
+- If `gemini` returns a model-not-found error, surface it verbatim in your output so the dispatcher can update `BOOK_CREATOR_GEMINI_MODEL` rather than retrying blindly.
 - `--approval-mode plan` forces Gemini into read-only mode so it cannot accidentally edit repo files. This is non-negotiable.
 - Never use `-y` / `--yolo`.
 - Never use `--include-directories`, `-w` / `--worktree`, or any flag that grants write or filesystem-mutation capability.

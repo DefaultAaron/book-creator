@@ -95,3 +95,13 @@ The relevant ±2 chapters of the book outline, so codex sees this chapter in con
 ## 11. Downstream commitments
 
 <What chapters after this one will assume from this chapter — informs section depth and what must be made explicit vs left implicit.>
+
+## 12. Cross-section artifact contracts (optional)
+
+For chapters where one section consumes structured output produced by another (e.g. a synthesis section aggregating per-section catalog rows; a comparison table assembled from sibling sections), name each artifact explicitly so producers and consumers can be checked against the same schema.
+
+| Artifact | Producer section(s) | Consumer section(s) | Required schema / fields | Validation rule |
+|---|---|---|---|---|
+| `<artifact_id>` | <N>.<a> | <N>.<b> | `field1: <type>`, `field2: <type>`, ... | <e.g. "consumer must list all producer rows verbatim; missing rows fail Phase-5 final review"> |
+
+Skip this section entirely if no cross-section artifacts exist. When present, the consumer section's brief must restate the schema and producer list verbatim.

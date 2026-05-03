@@ -23,7 +23,7 @@ Verbose authoritative spec: `_workflow/pipeline_design.md`. This section is the 
 **Pipeline (7 phases — Phase 0 once, Phases 1–6 per chapter):**
 
 0. **Book outline derivation** — Main + gemini + codex RESEARCH parallel research on the user's topic; main drafts an outline at `_workflow/plans/book_outline.md`; codex CONFLICT iterates to AGREED; **user explicitly approves**; main writes `00_table_of_contents.md` + per-chapter overview shells; single `outline:` commit.
-1. **Research** (per chapter) — main + gemini + codex RESEARCH in parallel; main integrates into `_workflow/research/<chapter>_synthesis.md`.
+1. **Research** (per chapter) — main + gemini + codex RESEARCH in parallel; main integrates into `_workflow/research/<N>_<chapter_slug>_synthesis.md` (canonical: same `<N>_<chapter_slug>` stem as the chapter folder).
 2. **Research deal-loop** — main + codex CONFLICT iterate; codex may *propose* structural changes (proposed-not-adopted; user approves before lockstep update).
 3. **Chapter plan + allocation deal-loop** — main drafts chapter plan covering: section list, DAG, parallel batches, writer assignments, handoff snippets, style anchor, prerequisite chain, TOC slice, must-preserve terminology, reader assumptions, downstream commitments. Codex CONFLICT reviews. **Writer assignment is finalized here and locked for the chapter** — no mid-run fallback.
 4. **Per-section drafting** (parallel where independent) — main builds section briefs at `_workflow/briefs/`, enforces full-repo `git status --porcelain` clean precondition, writes the batch sentinel listing assigned paths, dispatches cc-writer / codex-writer per the **codex-default ratio** (cc-writer reserved for chapter-classified contested-framing / high-judgment-synthesis sections per Rule 3a), copies codex-writer outputs back from the worktree, runs structured post-batch validation, removes the sentinel.
@@ -62,7 +62,7 @@ The pipeline procedure is encoded as six invocable skills. Use the `Skill` tool 
 |---|---|---|
 | `bootstrap` | Fresh scaffold, no commits / no codex worktree, or user asks "set things up" | One-time setup |
 | `new-book` | User gives a topic and there is no `_workflow/plans/book_outline.md` | Phase 0 |
-| `new-chapter` | User starts a new chapter; no `_workflow/plans/<chapter>_chapter_plan.md` | Phases 1–3 |
+| `new-chapter` | User starts a new chapter; no `_workflow/plans/<N>_<chapter_slug>_chapter_plan.md` | Phases 1–3 |
 | `draft-batch` | Chapter plan AGREED, next batch in DAG ready to dispatch | Phase 4 |
 | `section-deal-loop` | A section is at `workflow_status: draft` or `reviewing` and needs critique iteration | Phase 5 |
 | `close-chapter` | Every section in chapter at `workflow_status: reviewing` (Phase 5 AGREED) | Phase 6 |
@@ -72,9 +72,9 @@ Skills are procedural checklists; the verbose spec (`_workflow/pipeline_design.m
 ## Working in the repo
 
 - Section files live at `chapter_<N>_<slug>/<N>_<M>_<section_slug>.md`. Underscore-prefixed folders (`_workflow/`, `_templates/`, `_assets/`) are support, not content.
-- Templates are in `_templates/`. Use `_section.md` for new section files; `_chapter_overview.md` for chapter overviews; `_chapter_plan.md` for Phase 3 plans; `_book_outline.md` for Phase 0; `_section_brief.md` for Phase 4 writer briefs.
+- Templates are in `_templates/`. Use `_section.md` for new section files; `_chapter_overview.md` for chapter overviews; `_chapter_plan.md` for Phase 3 plans; `_book_outline.md` for Phase 0; `_section_brief.md` for Phase 4 writer briefs. `_code_example.md` and `_reading_list_entry.md` are optional templates for code-heavy / non-fiction-research books.
 - All hooks live in `.claude/hooks/` and are wired in `.claude/settings.json`. After editing a hook, run `/hooks` to verify Claude Code picked up the change.
-- The codex-writer worktree must be initialized once per book project: `git worktree add ../$(basename "$(pwd)")-codex-worktree -b codex-writer-isolated`. The `bootstrap` skill does this for you.
+- The codex-writer worktree must be initialized once per book project: `git worktree add ../$(basename "$(pwd)")-codex-worktree -b codex-writer-isolated`. The `bootstrap` skill does this for you. Override the location with `BOOK_CREATOR_CODEX_WORKTREE=<absolute-path>` (read by bootstrap, draft-batch, snapshot hook, codex-writer); override the Gemini model with `BOOK_CREATOR_GEMINI_MODEL=<model-id>` (required if the default preview model has been retired).
 
 ## Optional plugins
 

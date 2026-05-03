@@ -19,7 +19,10 @@ import { resolve, basename } from 'node:path';
 const REPO_ROOT = process.cwd();
 const STATE_PATH = resolve(REPO_ROOT, '_workflow/STATE.md');
 const REPO_NAME = basename(REPO_ROOT);
-const WORKTREE_PATH = resolve(REPO_ROOT, '..', `${REPO_NAME}-codex-worktree`);
+// BOOK_CREATOR_CODEX_WORKTREE wins if set (per `bootstrap` skill); otherwise derive default.
+const WORKTREE_PATH = process.env.BOOK_CREATOR_CODEX_WORKTREE
+  ? resolve(process.env.BOOK_CREATOR_CODEX_WORKTREE)
+  : resolve(REPO_ROOT, '..', `${REPO_NAME}-codex-worktree`);
 const SENTINEL_PATH = resolve(REPO_ROOT, '.claude/active_writer_batch.json');
 
 if (!existsSync(STATE_PATH)) {

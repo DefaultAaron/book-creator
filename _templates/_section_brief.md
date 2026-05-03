@@ -39,11 +39,17 @@ Any other write is blocked by the PreToolUse hook (cc-writer) or discarded as ou
 
 ## Research synthesis excerpt
 
-<Slice of `_workflow/research/<chapter>_synthesis.md` that is this section's evidence base. Concrete claims, citations, dates, names. Writer must not invent beyond this.>
+<Slice of `_workflow/research/<N>_<chapter_slug>_synthesis.md` that is this section's evidence base. Concrete claims, citations, dates, names. Writer must not invent beyond this.>
 
 ## Handoff snippet (only if section is dependent)
 
 <2–4 sentences naming what predecessor section(s) establish: terminology to match, assumptions to inherit, what to avoid re-deriving.>
+
+## Cross-section artifact contracts (only if this section produces or consumes structured rows / tables / catalogs another section depends on)
+
+If the chapter plan §12 names this section as a producer or consumer of a cross-section artifact, restate the artifact contract here verbatim (artifact id, required schema/fields, producer/consumer list, validation rule). The writer is bound to this exact shape.
+
+Skip the section if the chapter plan does not list any cross-section artifacts touching this section.
 
 ## Style anchor
 

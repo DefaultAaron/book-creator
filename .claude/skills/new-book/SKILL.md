@@ -17,6 +17,36 @@ If the topic is vague, ask one clarifying question covering: target audience, ge
 
 ## Steps
 
+### 0. Bootstrap precondition check (HARD)
+
+Before any research dispatch, verify bootstrap completed. Each check prints `[ok]` or `[FAIL]` so missing prerequisites cannot be silently glossed over:
+
+```bash
+FAIL=0
+
+# The bootstrap marker is the single source of truth — bootstrap writes it as its last step
+# only after all 8 checks (initial commit, default branch, worktree path, worktree create,
+# codex --cwd smoke-test, hooks, gemini, optional permissions) pass.
+if [ -f .claude/bootstrap_complete.json ]; then
+  echo "[ok]   bootstrap marker present ($(cat .claude/bootstrap_complete.json))"
+else
+  echo "[FAIL] .claude/bootstrap_complete.json missing — run the bootstrap skill first (it includes the codex --cwd smoke-test that catches misconfigurations Phase 0 will not)"
+  FAIL=1
+fi
+
+# Belt-and-suspenders: also verify the live state in case bootstrap was run but the worktree
+# was later removed manually, or codex/gemini were uninstalled.
+git rev-parse HEAD >/dev/null 2>&1 || { echo "[FAIL] no commits yet"; FAIL=1; }
+git worktree list | grep -q codex-writer-isolated || { echo "[FAIL] codex worktree gone — re-run bootstrap"; FAIL=1; }
+CODEX_SCRIPT=$(printf '%s\n' "$HOME"/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs 2>/dev/null | sort -V | tail -1)
+[ -n "$CODEX_SCRIPT" ] && [ -f "$CODEX_SCRIPT" ] || { echo "[FAIL] codex-companion.mjs not found"; FAIL=1; }
+command -v gemini >/dev/null 2>&1 || { echo "[FAIL] gemini CLI not on PATH"; FAIL=1; }
+
+[ "$FAIL" -eq 0 ] || { echo "Run the bootstrap skill before continuing with new-book."; exit 1; }
+```
+
+Phase 0 dispatches gemini and codex in parallel; missing prerequisites here would silently fail later in the pipeline.
+
 ### 1. Parallel research (no adversarial review)
 
 Dispatch three streams in **a single message with three parallel `Agent` tool calls**:
@@ -66,11 +96,13 @@ On approval, in a single message, write all of:
 
 - `00_table_of_contents.md` — the live progress tracker (chapter list with section status legend).
 - One `chapter_<N>_<slug>/<N>_0_overview.md` per chapter, using `_templates/_chapter_overview.md` (filled with chapter scope, learning objectives / goals, prerequisites, empty section table).
+- (Optional) `reading_list.md` at repo root, **only if** the book is research-heavy (non-fiction, technical, academic) AND the user / outline calls for a reading list. Seed it with one `## Chapter <N> — <Title>` heading per chapter and a one-line note "use `_templates/_reading_list_entry.md` for entries". For fiction, narrative, short-form, or any book where a reading list adds no value, **skip this file** — do not create an empty placeholder. Decide explicitly during outline drafting (item §1 of the outline) and surface the decision to the user before approval.
 
-Then commit:
+Then commit (paths conditional on what was created):
 
 ```bash
 git add _workflow/plans/book_outline.md 00_table_of_contents.md chapter_*/
+[ -f reading_list.md ] && git add reading_list.md
 git commit -m "outline: <one-line summary, e.g. 'book outline approved (12 chapters, ~110 sections)'>"
 ```
 

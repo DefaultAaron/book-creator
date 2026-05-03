@@ -11,6 +11,31 @@ Verbose spec: `_workflow/pipeline_design.md` Phase 5 + §5 + §8.
 
 - The section file exists at the assigned path with `workflow_status: draft` or `reviewing`.
 - The chapter plan records the writer assignment (cc-writer or codex-writer) for this section. **Locked at Phase 3 — do not reassign mid-loop.**
+- `.claude/active_writer_batch.json` does NOT exist (no Phase-4 batch in flight).
+- `git status --porcelain` is clean.
+- **Bootstrap marker present**: `.claude/bootstrap_complete.json` must exist. If missing, refuse and tell the user to run `bootstrap` first — Phase-5 codex-writer revisions depend on the same `--cwd` isolation guarantee bootstrap smoke-tests.
+
+## One-section revision dispatch — shared procedure
+
+Every revision (Path A every round, Path B rounds 1..N-1, Path B final-round fix, Rule 3d cc-writer fresh-eye) goes through the same dispatch shape as Phase 4 — just with a one-section sentinel instead of a batch. **Reuse this procedure verbatim** every time a writer dispatch is invoked from this skill.
+
+1. **Clean-state check (HARD).** `git status --porcelain` must be empty. If dirty, ABORT.
+2. **Worktree hygiene** (codex-writer revisions only): `git -C "$WORKTREE" merge --ff-only $(git symbolic-ref --short HEAD 2>/dev/null || git branch --show-current)` and verify `git -C "$WORKTREE" status --porcelain` is empty. `WORKTREE="${BOOK_CREATOR_CODEX_WORKTREE:-$(cd .. && pwd)/$(basename "$(pwd)")-codex-worktree}"`.
+3. **Capture pre-revision SHA**: `PRE_REVISION_SHA=$(git rev-parse HEAD)`.
+4. **Write one-section sentinel** to `.claude/active_writer_batch.json` (include `pre_revision_sha` and `dispatched_at` so a crash-recovery session can apply pipeline_design §6.5 deterministically):
+   ```json
+   {
+     "allowed_paths": ["<the-one-section-path>"],
+     "pre_revision_sha": "<sha>",
+     "dispatched_at": "<iso-timestamp>"
+   }
+   ```
+5. **Dispatch the writer** (cc-writer in main repo, or codex-writer in worktree per the agent file). The brief is "revise per these critique IDs: <list>".
+6. **Copy back** (codex-writer only): `cp "$WORKTREE/<path>" "./<path>"`.
+7. **Validate**: `git diff --name-only "$PRE_REVISION_SHA"` should show only the one assigned path. Anything else, revert per Phase-4 §6.4 (file-specific `git restore --source="$PRE_REVISION_SHA" -- <path>`; `rm` for new untracked files).
+8. **Stage and commit**: `git add <path> && git commit -m "wip(<chapter>/<section>): <writer> round <N> revision"`.
+9. **Reset the codex worktree** (codex-writer revisions only): `git -C "$WORKTREE" reset --hard "$(git symbolic-ref --short HEAD 2>/dev/null || git branch --show-current)" && git -C "$WORKTREE" clean -fd`. Without this, the next round's worktree-ff check (step 2) sees the previous round's revision still sitting in the worktree and aborts.
+10. **Remove the sentinel** (MUST): `rm .claude/active_writer_batch.json`. Leaving it across iterations breaks the "no batch in flight" invariant STATE.md relies on and confuses recovery after `/clear` or `/compact`.
 
 ## Path selection
 
@@ -37,7 +62,7 @@ Codex returns 3–6 ordered objections, ending with `STILL DISAGREEING:` or (rar
 
 For each codex critique, decide:
 
-- **Apply** → re-dispatch the writer (cc-writer) with a one-section revision sentinel and a brief that says "revise per these critique IDs". Do not main-direct edit unless it's `writer-overhead` (spelling / dup word / broken Markdown / format artifact — no semantic changes).
+- **Apply** → re-dispatch the writer (cc-writer) using the **one-section revision dispatch procedure** above (clean-state check → sentinel → dispatch → copyback → validate → commit → sentinel-remove). Do not main-direct edit unless it's `writer-overhead` (spelling / dup word / broken Markdown / format artifact — no semantic changes).
 - **Push back** → end your turn with `CONTESTED: <critique-id> — <category>: <one-line>`. Categories: `already-satisfied`, `technically-wrong`, `pedagogically-worse`, `out-of-scope`, `over-budget`, `chapter-context`. Codex's next round must answer this before introducing new objections.
 
 After applying / contesting, dispatch `codex-collaborator MODE: CONFLICT, ROUND: <N+1>, RESUME: true` with the diff and your responses.
@@ -68,7 +93,7 @@ For each round, write your own critique covering the standard checks (clarity, a
 - **foundational example choice** — entry-level examples illustrative vs overly-abstract / overly-applied
 - **depth defaults** — explanation depth matches the chapter plan's depth band
 
-If any critique remains, re-dispatch codex-writer with a one-section revision sentinel and a brief saying "revise per these critique IDs". Do not main-direct edit.
+If any critique remains, re-dispatch codex-writer using the **one-section revision dispatch procedure** above (clean-state check → worktree ff → sentinel → dispatch → copyback → validate → commit → sentinel-remove). Do not main-direct edit.
 
 If no critiques remain, advance to the final-round sanity pass.
 
@@ -116,7 +141,7 @@ If a codex-drafted section reaches **round 4 or beyond** and the residual disagr
 - Same requested outcome
 - **Persistent critique IDs** (e.g. `5.X-r2-c3` reused at rounds 2/3/4) — required, not gameable by varying phrasing
 
-If the trigger fires, dispatch cc-writer with a tightly-scoped brief: "revise the following N paragraphs against main's round-N critique with the chapter plan as rubric". One-section revision sentinel. After cc-writer returns, resume the codex deal-loop on the changed passage.
+If the trigger fires, dispatch cc-writer with a tightly-scoped brief: "revise the following N paragraphs against main's round-N critique with the chapter plan as rubric". Use the **one-section revision dispatch procedure** above. After cc-writer returns, resume the codex deal-loop on the changed passage.
 
 ## Update STATE.md
 

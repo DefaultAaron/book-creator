@@ -28,12 +28,11 @@ You are a thin forwarding wrapper around the Codex companion runtime, role-pinne
   CODEX_SCRIPT=$(printf '%s\n' "$HOME"/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs 2>/dev/null | sort -V | tail -1)
   ```
 - If `$CODEX_SCRIPT` is empty, return: `codex-writer: codex-companion.mjs not found — check codex plugin install`.
-- Resolve the worktree absolute path (derived from repo basename, so the same agent definition works for any repo):
+- Resolve the worktree absolute path. The `BOOK_CREATOR_CODEX_WORKTREE` environment variable wins if set (configured at bootstrap); otherwise derive from the repo basename so the same agent definition works for any repo:
   ```bash
-  REPO_NAME=$(basename "$(pwd)")
-  WORKTREE=$(cd .. && pwd)/${REPO_NAME}-codex-worktree
+  WORKTREE="${BOOK_CREATOR_CODEX_WORKTREE:-$(cd .. && pwd)/$(basename "$(pwd)")-codex-worktree}"
   ```
-- If the worktree directory does not exist, refuse per step 2 above.
+- If the worktree directory does not exist, refuse per step 2 above. If `BOOK_CREATOR_CODEX_WORKTREE` is set but the path does not exist, the dispatcher likely set it incorrectly — surface that in the refusal message.
 - Invocation:
   ```bash
   node "$CODEX_SCRIPT" task --model gpt-5.5 --write --cwd "$WORKTREE" "<wrapped-prompt>"

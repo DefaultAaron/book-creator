@@ -4,8 +4,32 @@
 # Local Claude Code settings (per-machine)
 .claude/settings.local.json
 
+# Bootstrap marker — written at end of `bootstrap` skill, gates new-book/new-chapter
+.claude/bootstrap_complete.json
+
 # Scheduled task lock
 .claude/scheduled_tasks.lock
 
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.\#*
+\#*\#
+
 # OS noise
 .DS_Store
+Thumbs.db
+
+# Build / export outputs (your toolchain may write here when assembling final book artifacts)
+_exports/
+dist/
+build/
+node_modules/
+
+# Python virtualenvs / caches (if you script anything in Python alongside the book)
+.venv/
+__pycache__/
+*.pyc

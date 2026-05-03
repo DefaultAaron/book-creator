@@ -14,7 +14,7 @@ A topic-and-genre-agnostic scaffold for using Claude Code to draft long-form boo
 | Agent behavior (cc-writer, codex-writer, codex-collaborator, gemini-researcher) | `.claude/agents/<agent>.md` |
 | Hook behavior (path scope, snapshot, reminders) | `.claude/hooks/<hook>.{mjs,sh}` |
 | Skill content (bootstrap, new-book, new-chapter, draft-batch, section-deal-loop, close-chapter) | `.claude/skills/<skill>/SKILL.md` |
-| Templates (section, chapter overview, chapter plan, book outline, section brief) | `_templates/<template>.md` |
+| Templates (section, chapter overview, chapter plan, book outline, section brief, optional reading-list-entry / code-example) | `_templates/<template>.md` |
 | Hook wiring | `.claude/settings.json` |
 
 ## The lockstep rule
@@ -43,6 +43,31 @@ node -e "JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8'))"
 
 # Snapshot hook runs without error against an empty STATE.md
 node .claude/hooks/snapshot_state.mjs
+
+# Skill and agent frontmatter parses, names are unique
+node -e '
+  const fs = require("fs"), path = require("path");
+  const seen = {};
+  let bad = 0;
+  function check(dir) {
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, ent.name);
+      if (ent.isDirectory()) { check(p); continue; }
+      if (!p.endsWith(".md")) continue;
+      const txt = fs.readFileSync(p, "utf8");
+      const m = txt.match(/^---\n([\s\S]*?)\n---/);
+      if (!m) { console.error("no frontmatter:", p); bad++; continue; }
+      const name = (m[1].match(/^name:\s*(\S+)/m) || [])[1];
+      const desc = (m[1].match(/^description:\s*\S/m));
+      if (!name) { console.error("no name:", p); bad++; }
+      if (!desc) { console.error("no description:", p); bad++; }
+      if (name && seen[name]) { console.error("duplicate name", name, "in", p, "and", seen[name]); bad++; }
+      if (name) seen[name] = p;
+    }
+  }
+  check(".claude/skills"); check(".claude/agents");
+  if (bad) process.exit(1); else console.log("ok: skills + agents frontmatter clean");
+'
 ```
 
 For agent / skill / template content changes, the only test is reading the diff carefully and trying it in a real Claude Code session.

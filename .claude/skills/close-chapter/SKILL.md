@@ -10,10 +10,51 @@ Verbose spec: `_workflow/pipeline_design.md` Phase 6.
 ## Preconditions
 
 - Every section in the target chapter has `workflow_status: reviewing` (Phase 5 AGREED).
-- No `_workflow/active_writer_batch.json` (no batch in flight).
+- No `.claude/active_writer_batch.json` (no batch in flight).
 - `git status --porcelain` is clean.
 
 ## Steps
+
+### 0. Resolve chapter and verify the **expected** section list (HARD)
+
+Iterating only files-on-disk would silently skip a section the chapter plan listed but no one ever drafted. Resolve the **expected** section paths from the plan first, then check each:
+
+```bash
+N=<chapter number from user prompt or STATE.md active_chapter>
+CHAPTER_FOLDER=$(ls -d chapter_${N}_* 2>/dev/null | head -1)
+[ -z "$CHAPTER_FOLDER" ] && { echo "[FAIL] no chapter_${N}_* folder"; exit 1; }
+CHAPTER_KEY="${CHAPTER_FOLDER#chapter_}"
+PLAN_PATH="_workflow/plans/${CHAPTER_KEY}_chapter_plan.md"
+[ -f "$PLAN_PATH" ] || { echo "[FAIL] $PLAN_PATH missing — chapter plan must exist for close-chapter"; exit 1; }
+
+[ -z "$(git status --porcelain)" ] || { echo "[FAIL] working tree dirty — commit/stash before close-chapter"; exit 1; }
+[ ! -f .claude/active_writer_batch.json ] || { echo "[FAIL] active sentinel — a writer batch is in flight; resolve before close-chapter"; exit 1; }
+```
+
+Then **read** `$PLAN_PATH` §1 (Section list) and produce the expected list of section files. For each row in §1, the expected path is `${CHAPTER_FOLDER}/${N}_<M>_<slug>.md` (where `<M>` and `<slug>` come from the row). For each expected path:
+
+```bash
+# Run this loop with EXPECTED_PATHS = the parsed list from plan §1.
+FAIL=0
+for f in "${EXPECTED_PATHS[@]}"; do
+  if [ ! -f "$f" ]; then
+    echo "[FAIL] $f listed in $PLAN_PATH §1 but file does not exist — Phase 4/5 incomplete for this section"
+    FAIL=1
+    continue
+  fi
+  STATUS=$(awk '/^---$/{s++; next} s==1 && /^workflow_status:/{print $2; exit}' "$f")
+  case "$STATUS" in
+    reviewing) echo "[ok]   $f at workflow_status: reviewing";;
+    complete)  echo "[note] $f already complete (chapter previously published?)";;
+    draft)     echo "[FAIL] $f at workflow_status: draft — Phase 5 not finished"; FAIL=1;;
+    planned|"") echo "[FAIL] $f at workflow_status: ${STATUS:-<missing>} — never drafted"; FAIL=1;;
+    *)         echo "[FAIL] $f has unknown workflow_status: $STATUS"; FAIL=1;;
+  esac
+done
+[ "$FAIL" -eq 0 ] || { echo "Resolve the above before continuing with close-chapter."; exit 1; }
+```
+
+If all `[ok]`, proceed.
 
 ### 1. Read the chapter end-to-end
 
