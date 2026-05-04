@@ -110,7 +110,7 @@ Skip this section entirely if no cross-section artifacts exist. When present, th
 
 **Source-of-truth + normalization rule (Phase-5 acceptance checkpoint enforces).** §12 is the single contract. After a producer section closes Phase-5 AGREED, main session runs the producer artifact acceptance checkpoint (`section-deal-loop` skill):
 
-- If the produced artifact matches the row above exactly → no change.
+- If the produced artifact matches the row above exactly → main session **annotates the row in place** with `(accepted YYYY-MM-DD via <commit-sha>)`. The annotation is what `draft-batch`'s dispatch-time §12 invariant check reads to confirm acceptance happened.
 - If it drifted *within* the row's allowed shape (a name choice, an ordering convention, an optional field added or omitted) → main session **amends the row in place** and adds an inline annotation `(normalized YYYY-MM-DD via <commit-sha>)`. Consumer briefs drafted afterward consume the amended row.
 - If it violates the row (required field missing / schema broken / drift changes consumer obligation) → main session reopens the producer's Phase-5 deal-loop. Do NOT amend §12.
 
