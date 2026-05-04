@@ -152,6 +152,8 @@ Run after **every** AGREED commit on a section the chapter plan §12 names as a 
 
 **Boundary rule between (ii) and (iii).** Normalization may only clarify names / ordering / optional fields. It may NOT (a) remove a required field, (b) rename a required field, (c) redefine a required field's semantics, or (d) add a new required consumer obligation. Any of (a)–(d) is case (iii).
 
+**Informal structured artifact discovered after Phase 3.** If §12 was empty (or omitted this contract) at Phase 3 but the producer is now observed to emit a structured artifact downstream sections need, this is a **Phase-3 plan defect / scope discovery** — not a §12 normalization. Stop downstream brief drafting, run a tightly-scoped Phase-3 plan deal-loop on §12 alone with codex-collaborator MODE: CONFLICT, commit as `lockstep(<chapter>): §12 scope discovery — <artifact-id> — <one-line>`, then run this acceptance checkpoint against the newly-declared §12 row. Do NOT silently amend §12 ad hoc.
+
 If §12 is empty or this section is not named as a producer, the checkpoint is a no-op.
 
 ---

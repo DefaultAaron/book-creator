@@ -115,3 +115,5 @@ Skip this section entirely if no cross-section artifacts exist. When present, th
 - If it violates the row (required field missing / schema broken / drift changes consumer obligation) → main session reopens the producer's Phase-5 deal-loop. Do NOT amend §12.
 
 Consumer briefs ALWAYS read the current §12; they never derive contract shape from "as-built" producer files.
+
+**Scope-discovery rule.** If a producer is observed to emit a structured artifact §12 did not anticipate, treat it as a Phase-3 plan defect: pause downstream brief drafting, run a tightly-scoped Phase-3 plan deal-loop on §12 with codex-collaborator MODE: CONFLICT, commit as `lockstep(<chapter>): §12 scope discovery — <artifact-id> — <one-line>`, then run the acceptance checkpoint. Do NOT amend §12 ad hoc.

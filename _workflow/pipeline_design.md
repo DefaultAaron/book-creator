@@ -215,6 +215,8 @@ If the just-AGREED section is named in chapter plan §12 as a *producer* of a cr
 
 **Source-of-truth rule.** §12 is the single contract. Briefs are derivations and restate §12 verbatim. Main session NEVER edits a consumer brief to reflect a "real" producer state without first amending §12. The Phase-3 intra-batch producer-consumer rejection rule (above) guarantees no consumer dispatches before its producer's checkpoint runs.
 
+**Informal structured artifact discovered after Phase 3.** If §12 was empty (or omitted a contract) at Phase 3, and a producer section is later observed to emit a structured artifact that downstream sections need, the situation is a **Phase-3 plan defect / scope discovery**, not a §12 normalization. Procedure: **stop downstream brief drafting**, run a tightly-scoped Phase-3 plan deal-loop on §12 alone (main session drafts the missing artifact row + DAG implications; codex-collaborator MODE: CONFLICT reviews; iterate to AGREED), commit as `lockstep(<chapter>): §12 scope discovery — <artifact-id> — <one-line>`, then run the producer artifact acceptance checkpoint against the newly-declared contract. Do NOT silently amend §12 ad hoc — scope discovery is a structural change that requires the same review discipline as the original Phase 3.
+
 ### Phase 6 — Chapter voice pass (terminal)
 
 After all sections in the chapter have reached per-section AGREED, main session and `codex-collaborator MODE: CONFLICT` read across the chapter as a whole and harmonize **surface concerns only**:
@@ -229,6 +231,8 @@ After all sections in the chapter have reached per-section AGREED, main session 
 Edits in this phase are made by main session directly (writers are not re-dispatched at the chapter level). On AGREED, main session sets every section's frontmatter to `workflow_status: complete` and commits the chapter with TOC + chapter-overview lockstep updates bundled in.
 
 **Pending `writer-unavailable-contingency` reabsorption.** If any section in the chapter still carries a `[contingency-pending-readjudication]` marker in STATE.md `do_not_redo` (i.e., no further writer dispatch happened after the contingency was applied), main session passes the contingency log (writer / cause / before / after, plus the affected line range) to `codex-collaborator MODE: CONFLICT` alongside the section diff at this voice pass. Codex's critique covers each pending contingency — accept-as-is / request revision / reject — and the chapter cannot AGREE while any contingency remains unadjudicated. Once adjudicated, clear the marker from `do_not_redo`.
+
+**Phase-6 contingency-revision guardrail.** Any revision codex requests for a pending contingency at the voice pass MUST stay within Phase-6 surface-edit scope (transition phrasing, redundancy trim, tense / register tweak, terminology fix). A requested revision that would require semantic restructure, new claim, new evidence, shifted stance, or new structure — anything beyond the contingency tag's own narrow definition — bounces the section back to Phase 5 for proper writer-dispatch revision. Phase 6 cannot become a back-door for Phase-5-class edits.
 
 ## 4. Section file lifecycle
 

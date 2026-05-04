@@ -76,6 +76,8 @@ Dispatch `codex-collaborator MODE: CONFLICT, ROUND: 1` with:
 - Your own list of surface concerns
 - **Pending `writer-unavailable-contingency` log** — for any section in the chapter whose STATE.md `do_not_redo` still carries a `[contingency-pending-readjudication]` marker, include the contingency log (commit SHA / writer / cause / before / after / line range). Codex's voice-pass critique covers each pending contingency: accept-as-is / request revision / reject. The chapter cannot AGREE while any contingency remains unadjudicated.
 
+**Phase-6 contingency-revision guardrail.** Any revision codex requests for a pending contingency MUST stay within Phase-6 surface-edit scope (transition phrasing, redundancy trim, tense / register tweak, terminology fix). If codex's requested revision would require semantic restructure, new claim, new evidence, shifted stance, or new structure — i.e., anything beyond the contingency tag's own narrow definition — the section bounces back to Phase 5 (`section-deal-loop` skill) for proper writer-dispatch revision. Phase 6 cannot become a back-door for Phase-5-class edits.
+
 Codex critiques across the chapter, focused on the same four surface concerns plus contingency adjudication. Iterate per §8.
 
 ### CONTESTED in Phase 6
