@@ -60,7 +60,11 @@ Then **read** `$PLAN_PATH` and extract for Batch `$K`:
 
 1. `workflow_status: reviewing` or `complete` (read from the producer file's frontmatter).
 2. Exactly one current annotation clause for it on the §12 row, in the form `(producer <N>.<m>: accepted YYYY-MM-DD via <agreed-sha>)` (case i) or `(producer <N>.<m>: normalized YYYY-MM-DD via <agreed-sha>)` (case ii). Multi-producer rows must have one clause per producer; one producer's clause does not satisfy the others.
-3. **Latest-`agreed-sha` match.** The `<agreed-sha>` in the producer's clause must equal the producer's latest `agreed(<chapter>/<producer-section>):` commit SHA, computed via `git log --oneline | grep "agreed(<chapter>/<producer-section>):" | head -1 | awk '{print $1}'`. A mismatch means the producer was reopened and re-AGREED but the §12 clause was not replaced — ABORT.
+3. **Latest-`agreed-sha` match.** The `<agreed-sha>` in the producer's clause must equal the producer's latest `agreed(<chapter>/<producer-section>):` commit SHA, computed via an anchored extended-regex grep against the commit subject so substring collisions across section paths cannot match (e.g., `5_2` matching `5_20`):
+   ```bash
+   git log -E --grep="^agreed\\(${CHAPTER}/${PRODUCER_SECTION}\\): " -n 1 --format=%h
+   ```
+   Substitute `${CHAPTER}` and `${PRODUCER_SECTION}` from the §12 row. A mismatch means the producer was reopened and re-AGREED but the §12 clause was not replaced — ABORT.
 4. **No duplicate live clauses.** No two clauses for the same producer on the same row. If two clauses exist, the older one is stale and was not replaced on re-AGREED — ABORT.
 
 If any producer fails any of (1)–(4), ABORT — Batch `$K` is not ready. Belt-and-suspenders against a Phase-3 review that missed an intra-batch / out-of-order producer-consumer relationship and against operator error in the producer's acceptance-checkpoint replacement step.
