@@ -74,8 +74,9 @@ Dispatch `codex-collaborator MODE: CONFLICT, ROUND: 1` with:
 - The chapter plan's must-preserve terminology list (item 9)
 - The style anchor reference (item 6)
 - Your own list of surface concerns
+- **Pending `writer-unavailable-contingency` log** — for any section in the chapter whose STATE.md `do_not_redo` still carries a `[contingency-pending-readjudication]` marker, include the contingency log (commit SHA / writer / cause / before / after / line range). Codex's voice-pass critique covers each pending contingency: accept-as-is / request revision / reject. The chapter cannot AGREE while any contingency remains unadjudicated.
 
-Codex critiques across the chapter, focused on the same four surface concerns. Iterate per §8.
+Codex critiques across the chapter, focused on the same four surface concerns plus contingency adjudication. Iterate per §8.
 
 ### CONTESTED in Phase 6
 
@@ -88,6 +89,8 @@ Bidirectional every round. Main may push back with `CONTESTED:` per §8.1 (categ
 Unlike Phase 5, Phase 6 surface edits are made by main session directly (writers are not re-dispatched at the chapter level). Surface edits = transition phrases, redundancy trims, tense/register tweaks, terminology fixes. **No semantic changes; no structural rewrites.**
 
 ### 3. On AGREED — flip to complete and publish
+
+Clear any `[contingency-pending-readjudication]` markers from STATE.md `do_not_redo` (codex's adjudication closes them; if codex required a revision, the revision was applied during the voice-pass loop above before AGREED).
 
 For every section in the chapter, update frontmatter `workflow_status: reviewing` → `workflow_status: complete`.
 

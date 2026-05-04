@@ -80,6 +80,8 @@ git add <section-path>
 git commit -m "agreed(<chapter>/<section>): per-section deal-loop complete"
 ```
 
+Then run the **producer artifact acceptance checkpoint** below if §12 names this section as a producer.
+
 ---
 
 ## Path B — codex-drafted sections (asymmetric)
@@ -131,6 +133,27 @@ git add <section-path>
 git commit -m "agreed(<chapter>/<section>): per-section deal-loop complete"
 ```
 
+Then run the **producer artifact acceptance checkpoint** below if §12 names this section as a producer.
+
+---
+
+## Producer artifact acceptance checkpoint (when §12 is non-empty)
+
+Run after **every** AGREED commit on a section the chapter plan §12 names as a *producer*. Before any consumer section's brief is drafted, record exactly one outcome per artifact this section produces:
+
+- **(i) Accepted as-is** — producer matches §12 spec. Add a one-line entry to STATE.md `do_not_redo`. No further action.
+- **(ii) Accepted with normalization** — producer drifted *within* §12's allowed shape (a name, an ordering convention, an optional field). **Amend §12 in place** in the chapter plan with a `(normalized YYYY-MM-DD via <commit-sha>)` annotation noting the clarification. Then:
+  ```bash
+  git add _workflow/plans/<N>_<chapter_slug>_chapter_plan.md
+  git commit -m "lockstep(<chapter>): §12 normalization — <artifact-id> — <one-line>"
+  ```
+  All future consumer briefs read the amended §12. Briefs NEVER derive contract shape from "as-built" producer state.
+- **(iii) Rejected** — producer violates §12 (required field missing / schema semantically broken) OR the drift changes consumer argumentative burden (adds, renames, redefines, or removes a required consumer obligation). Do NOT amend §12. **Reopen the producer's Phase-5 deal-loop**: revert the just-committed `agreed(...)` commit's frontmatter flip (set `workflow_status: draft` back) and re-dispatch the writer with a brief flagging the §12-violation defect. Downstream consumer briefs are blocked until the producer reaches AGREED again.
+
+**Boundary rule between (ii) and (iii).** Normalization may only clarify names / ordering / optional fields. It may NOT (a) remove a required field, (b) rename a required field, (c) redefine a required field's semantics, or (d) add a new required consumer obligation. Any of (a)–(d) is case (iii).
+
+If §12 is empty or this section is not named as a producer, the checkpoint is a no-op.
+
 ---
 
 ## Rule 3d — late-round writer-side break (Path B only)
@@ -151,11 +174,42 @@ After each AGREED:
 - `last_agreed_commit: <new sha>`
 - Update `next_action` to point at the next section in the batch (or, if last in batch, to `draft-batch` for the next batch / `close-chapter` if all batches done).
 
+## Main-direct exception: `writer-unavailable-contingency`
+
+The only main-direct section-content exceptions are `writer-overhead` (typo / dup word / broken Markdown / format artifact) AND `writer-unavailable-contingency`. Use the contingency tag only when **all** of the following hold:
+
+- A writer dispatch was attempted and blocked by quota / rate-limit / runtime unavailability.
+- The fix is **exactly one local sentence**, no new claim, no new evidence, no shifted stance, no new structure.
+- The dispatch attempt is documented (timestamp, writer/model, failure mode, retry window).
+
+Commit format:
+```
+main-direct: writer-unavailable-contingency — <one-line>
+
+writer: <cc-writer | codex-writer> / <model>
+cause: <one-line — e.g. "429 rate-limit", "5xx for 12 min", "quota exhausted">
+attempt-ts: <ISO 8601>
+retry-window: <e.g. "3× over 8 min">
+before: <quoted single line>
+after:  <quoted single line>
+```
+
+Add a STATE.md `do_not_redo` entry with a `[contingency-pending-readjudication]` marker referencing this commit. The next writer dispatch on this section **MUST** include a "Contingency adjudication" section in the brief listing this contingency with its before/after + cause; the writer's manifest declares accept-as-is / revise / reject. If no further writer dispatch happens before chapter close, Phase 6 codex-collaborator adjudicates the contingency at the chapter voice pass — clear the marker from `do_not_redo` only after adjudication.
+
+Do NOT use `writer-unavailable-contingency`:
+- when the writer is available but you'd rather not wait — that's a discipline violation
+- for multi-sentence rewrites or structural changes — escalate to user instead
+- when the change fits `writer-overhead` (typo / dup word / format artifact) — that's `writer-overhead`
+
+Repeated use in one chapter is an audit smell — note the cause pattern in STATE.md.
+
 ## Anti-patterns
 
-- Do NOT main-direct edit section content for anything beyond `writer-overhead`. Re-dispatch the writer.
+- Do NOT main-direct edit section content for anything beyond `writer-overhead` or `writer-unavailable-contingency`. Re-dispatch the writer.
 - Do NOT skip the final-round sanity pass on Path B even if you think the draft is perfect.
 - Do NOT auto-rerun gemini per round — content-risk trigger only.
 - Do NOT flip `workflow_status` to `complete` here. That happens only at Phase 6 chapter voice pass (`close-chapter` skill).
 - Do NOT mix Path A and Path B logic. Read the chapter plan's writer assignment first.
 - Do NOT reassign writer mid-loop. Allocation locked at Phase 3.
+- Do NOT skip the producer artifact acceptance checkpoint when §12 names this section as a producer.
+- Do NOT edit a consumer brief to reflect "as-built" producer state without first amending §12 (case ii of the checkpoint). §12 is the single source of truth.

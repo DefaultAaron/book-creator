@@ -97,6 +97,7 @@ Dispatch `codex-collaborator MODE: CONFLICT, ROUND: 1` with the chapter plan + y
 - Are handoff snippets specific enough?
 - Is the cc:codex split reasonable?
 - Does the must-preserve terminology list cover everything inherited?
+- **Intra-batch producer-consumer rejection (when §12 is non-empty).** For every cross-section artifact contract, the producer section's batch number must be strictly less than every consumer section's batch number. Same-batch producer→consumer is a DAG / allocation error; codex must reject any §12 row that violates it.
 
 On AGREED:
 

@@ -105,3 +105,13 @@ For chapters where one section consumes structured output produced by another (e
 | `<artifact_id>` | <N>.<a> | <N>.<b> | `field1: <type>`, `field2: <type>`, ... | <e.g. "consumer must list all producer rows verbatim; missing rows fail Phase-5 final review"> |
 
 Skip this section entirely if no cross-section artifacts exist. When present, the consumer section's brief must restate the schema and producer list verbatim.
+
+**DAG rule (Phase-3 deal-loop enforces).** For every artifact, the producer section's batch number (per §3) must be **strictly less than** every consumer section's batch number. Same-batch producer→consumer is invalid: a consumer cannot read an artifact being drafted concurrently. Codex-collaborator rejects §12 rows that violate this.
+
+**Source-of-truth + normalization rule (Phase-5 acceptance checkpoint enforces).** §12 is the single contract. After a producer section closes Phase-5 AGREED, main session runs the producer artifact acceptance checkpoint (`section-deal-loop` skill):
+
+- If the produced artifact matches the row above exactly → no change.
+- If it drifted *within* the row's allowed shape (a name choice, an ordering convention, an optional field added or omitted) → main session **amends the row in place** and adds an inline annotation `(normalized YYYY-MM-DD via <commit-sha>)`. Consumer briefs drafted afterward consume the amended row.
+- If it violates the row (required field missing / schema broken / drift changes consumer obligation) → main session reopens the producer's Phase-5 deal-loop. Do NOT amend §12.
+
+Consumer briefs ALWAYS read the current §12; they never derive contract shape from "as-built" producer files.

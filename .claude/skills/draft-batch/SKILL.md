@@ -80,10 +80,12 @@ For each section in the batch, write `_workflow/briefs/<chapter>_<section>_brief
 - Section scope (in / out / depth / length band)
 - Research synthesis excerpt for this section
 - Handoff snippet (if dependent)
+- **Cross-section artifact contract** (only if this section is a producer or consumer in plan §12): restate the §12 row **as it currently appears in the chapter plan**, including any `(normalized YYYY-MM-DD via <commit-sha>)` annotations from previous batches' acceptance checkpoints. §12 is the single source of truth — never derive contract shape from "as-built" producer files.
 - Style anchor link + voice rules
 - Framing constraints (explanation order, depth budget, allowed analogy registers)
 - Terminology contract (must-preserve terms with exact spelling)
 - Format requirements
+- **Contingency adjudication** (only if this section is being re-dispatched and STATE.md `do_not_redo` carries a `[contingency-pending-readjudication]` marker for it): list each pending `main-direct: writer-unavailable-contingency` with the before/after diff and the cause, and instruct the writer to declare accept-as-is / revise / reject per item in the manifest. The writer's resolution clears the marker.
 - Manifest expectations
 
 ### Optional — Phase-4 brief deal-loop

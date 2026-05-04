@@ -2,7 +2,7 @@
 title: Pipeline design — book-creator
 doc_type: pipeline-spec
 status: scaffold
-last_updated: 2026-05-02
+last_updated: 2026-05-04
 ---
 
 # Pipeline design — book-creator
@@ -122,6 +122,7 @@ Main session drafts a **chapter plan** at `_workflow/plans/<N>_<chapter_slug>_ch
 - Are handoff snippets specific enough that the dependent section can reference them without seeing the predecessor's draft?
 - Is the cc:codex split reasonable for this chapter's character?
 - Does the must-preserve terminology list cover everything inherited from earlier chapters?
+- **Intra-batch producer-consumer rejection (when §12 is non-empty).** For every cross-section artifact contract in §12, the producer section's batch number must be **strictly less than** every consumer section's batch number. Same-batch producer→consumer is a DAG / allocation error: consumer briefs cannot reflect a producer that is being drafted concurrently. Codex must reject any §12 row that violates this.
 
 Drafting does not begin until the plan reaches AGREED.
 
@@ -189,15 +190,30 @@ A vague "check for codex-style bias" is insufficient; main's critique must expli
 
 **Revisions go through writer dispatch — drafts AND revisions.** Re-dispatch the original writer (cc-writer for cc-drafted, codex-writer for codex-drafted) with the critique notes as the brief. The writer edits the same file in place (or in the worktree, for codex-writer). The writer always **leaves frontmatter at `workflow_status: draft`** — even on revisions. **Only main session flips `draft → reviewing`, and only on Phase 5 AGREED.** This makes status ownership unambiguous: `draft` means "writer-touched, not yet AGREED"; `reviewing` means "Phase 5 AGREED, awaiting Phase 6 voice pass". The writer dispatch is wrapped with a one-section revision sentinel (same `.claude/active_writer_batch.json` shape as a Phase-4 batch sentinel, but listing only the single section path) so the path-scope hook still gates the write.
 
-The only main-direct exception for section content is `main-direct: writer-overhead`, with a tightly narrow definition:
+The main-direct exceptions for section content are the two below. Both are tightly narrow; anything outside them requires a writer dispatch:
 
 | Case | Examples | Commit-message tag (mandatory) |
 |---|---|---|
 | **writer-overhead** | **Spelling, duplicated word, broken Markdown, obvious syntax/format artifact.** No semantic changes. No sentence rewrites. If the change alters meaning, tone, framing, or technical content, dispatch the writer instead. **Use rarely.** Repeated `writer-overhead` tags in one chapter are an audit smell. | `main-direct: writer-overhead — <one-line>` |
+| **writer-unavailable-contingency** | **Writer dispatch was attempted and blocked by quota / rate-limit / runtime unavailability**, AND the fix is exactly one local sentence inside what the writer would have produced. **No new claim, no new evidence, no shifted stance, no new structure** (no new heading, list, paragraph break, or terminology). The change is an emergency temporary patch that the next writer dispatch on this section MUST adjudicate. **Audit floor — commit body MUST quote `before:` / `after:` lines verbatim and record `writer:` / `cause:` / `attempt-ts:` / `retry-window:`.** STATE.md `do_not_redo` carries a `[contingency-pending-readjudication]` marker until the next writer dispatch resolves it (or, if no further dispatch happens, until Phase 6 codex-collaborator adjudicates it). **Use rarely.** Repeated use in one chapter is an audit smell — note the cause pattern in STATE.md. | `main-direct: writer-unavailable-contingency — <one-line>` (commit body carries the `writer / cause / attempt-ts / retry-window / before / after` block) |
 
-Any non-`writer-overhead` direct section-content edit without a writer dispatch in front of it is a workflow violation. Workflow / memory / STATE.md / TOC / chapter-overview / README / CLAUDE.md edits are NOT section-content writing and remain main-direct (these are coordination, not writing).
+Any non-listed direct section-content edit without a writer dispatch in front of it is a workflow violation. Workflow / memory / STATE.md / TOC / chapter-overview / README / CLAUDE.md edits are NOT section-content writing and remain main-direct (these are coordination, not writing).
+
+**Reabsorption mechanism for `writer-unavailable-contingency` (load-bearing).** The next writer dispatch on a section carrying a pending contingency MUST receive a "Contingency adjudication" section in its brief listing each pending contingency with the before/after diff and the cause; the writer's manifest declares accept-as-is / revise / reject per item. Without this, the contingency becomes permanent by inertia. If the section closes Phase 5 without a further writer dispatch (e.g., contingency was the last edit before AGREED), Phase 6 codex-collaborator receives the contingency log alongside the section diff and adjudicates it as part of the chapter voice pass.
 
 Convergence: codex-collaborator ends each turn (Path A every round; Path B final round only) with `AGREED:` or `STILL DISAGREEING:`. **Main session may also push back** under the `CONTESTED:` protocol of §8.1. On final AGREED, frontmatter stays at `workflow_status: reviewing` until the chapter voice pass.
+
+#### Producer artifact acceptance checkpoint (when §12 is non-empty)
+
+If the just-AGREED section is named in chapter plan §12 as a *producer* of a cross-section artifact, main session runs an **acceptance checkpoint** before any consumer section's brief is drafted. The checkpoint records, per artifact, exactly one outcome:
+
+- **(i) Accepted as-is** — producer matches §12 spec exactly. Logged in STATE.md `do_not_redo`. No further action.
+- **(ii) Accepted with normalization** — producer drifted *within* §12's allowed shape (clarification only: a name choice, an ordering convention, an optional field added or omitted). §12 is **amended in place** with a `(normalized YYYY-MM-DD via <commit-sha>)` annotation. Consumer briefs drafted afterward consume the amended §12 — they never derive contract shape from "as-built" producer state. Commit prefix: `lockstep(<chapter>): §12 normalization — <artifact-id> — <one-line>`.
+- **(iii) Rejected** — producer violates §12: a required field is missing, the schema is semantically broken, OR the drift changes consumer argumentative burden (adds, renames, redefines, or removes a required consumer obligation). Reopen the producer's Phase-5 deal-loop. Downstream consumer briefs blocked until the producer reaches AGREED again.
+
+**Boundary rule between (ii) and (iii) (load-bearing).** Normalization may only clarify names / ordering / optional fields. It may NOT (a) remove a required field, (b) rename a required field, (c) redefine a required field's semantics, or (d) add a new required consumer obligation. Any of (a)–(d) means case (iii).
+
+**Source-of-truth rule.** §12 is the single contract. Briefs are derivations and restate §12 verbatim. Main session NEVER edits a consumer brief to reflect a "real" producer state without first amending §12. The Phase-3 intra-batch producer-consumer rejection rule (above) guarantees no consumer dispatches before its producer's checkpoint runs.
 
 ### Phase 6 — Chapter voice pass (terminal)
 
@@ -211,6 +227,8 @@ After all sections in the chapter have reached per-section AGREED, main session 
 **No structural rewrites at Phase 6.** If a section needs structural rewrite, the chapter is not ready for Phase 6 and the section goes back to Phase 5.
 
 Edits in this phase are made by main session directly (writers are not re-dispatched at the chapter level). On AGREED, main session sets every section's frontmatter to `workflow_status: complete` and commits the chapter with TOC + chapter-overview lockstep updates bundled in.
+
+**Pending `writer-unavailable-contingency` reabsorption.** If any section in the chapter still carries a `[contingency-pending-readjudication]` marker in STATE.md `do_not_redo` (i.e., no further writer dispatch happened after the contingency was applied), main session passes the contingency log (writer / cause / before / after, plus the affected line range) to `codex-collaborator MODE: CONFLICT` alongside the section diff at this voice pass. Codex's critique covers each pending contingency — accept-as-is / request revision / reject — and the chapter cannot AGREE while any contingency remains unadjudicated. Once adjudicated, clear the marker from `do_not_redo`.
 
 ## 4. Section file lifecycle
 
