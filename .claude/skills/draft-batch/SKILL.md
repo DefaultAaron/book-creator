@@ -56,7 +56,7 @@ Then **read** `$PLAN_PATH` and extract for Batch `$K`:
 
 **Verify each predecessor section is at `workflow_status: complete` (preferred) or `workflow_status: reviewing` with stable terminology** before dispatching this batch. If any predecessor is still `draft` or `planned`, ABORT — Batch `$K` is not ready.
 
-**§12 invariant check (HARD — fail closed).** For every section in Batch `$K` that is named in plan §12 as a *consumer* of a cross-section artifact, every producer of that artifact MUST already be at `workflow_status: reviewing` or `complete` AND the producer's §12 row MUST carry an acceptance-checkpoint annotation: either `(accepted YYYY-MM-DD via <commit-sha>)` (case i — accepted as-is) or `(normalized YYYY-MM-DD via <commit-sha>)` (case ii — accepted with normalization). If any producer is still `draft` / `planned` / absent, OR its §12 row carries no annotation, ABORT — Batch `$K` is not ready. This is belt-and-suspenders against a Phase-3 review that missed an intra-batch / out-of-order producer-consumer relationship; the primary defense is the Phase-3 codex sanity check, but dispatch-time verification fails closed.
+**§12 invariant check (HARD — fail closed).** For every section in Batch `$K` that is named in plan §12 as a *consumer* of a cross-section artifact, every producer of that artifact MUST already be at `workflow_status: reviewing` or `complete` AND the artifact's §12 row MUST carry a per-producer acceptance-checkpoint annotation for it: either `(producer <N>.<m>: accepted YYYY-MM-DD via <agreed-sha>)` (case i) or `(producer <N>.<m>: normalized YYYY-MM-DD via <agreed-sha>)` (case ii). For multi-producer rows, every producer named in the row must have its own clause; one producer's clause does not satisfy the others. If any producer is still `draft` / `planned` / absent, OR is missing its annotation clause, ABORT — Batch `$K` is not ready. This is belt-and-suspenders against a Phase-3 review that missed an intra-batch / out-of-order producer-consumer relationship; the primary defense is the Phase-3 codex sanity check, but dispatch-time verification fails closed.
 
 Use the resolved section paths in step 6 (sentinel) and step 7 (dispatch); do not re-derive them later.
 
@@ -82,7 +82,7 @@ For each section in the batch, write `_workflow/briefs/<chapter>_<section>_brief
 - Section scope (in / out / depth / length band)
 - Research synthesis excerpt for this section
 - Handoff snippet (if dependent)
-- **Cross-section artifact contract** (only if this section is a producer or consumer in plan §12): restate the §12 row **as it currently appears in the chapter plan**, including any `(normalized YYYY-MM-DD via <commit-sha>)` annotations from previous batches' acceptance checkpoints. §12 is the single source of truth — never derive contract shape from "as-built" producer files.
+- **Cross-section artifact contract** (only if this section is a producer or consumer in plan §12): restate the §12 row **as it currently appears in the chapter plan**, including any `(producer <N>.<m>: accepted ... via <agreed-sha>)` / `(producer <N>.<m>: normalized ... via <agreed-sha>)` annotations from previous batches' acceptance checkpoints. §12 is the single source of truth — never derive contract shape from "as-built" producer files.
 - Style anchor link + voice rules
 - Framing constraints (explanation order, depth budget, allowed analogy registers)
 - Terminology contract (must-preserve terms with exact spelling)

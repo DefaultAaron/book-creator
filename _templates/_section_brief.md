@@ -47,7 +47,7 @@ Any other write is blocked by the PreToolUse hook (cc-writer) or discarded as ou
 
 ## Cross-section artifact contracts (only if this section produces or consumes structured rows / tables / catalogs another section depends on)
 
-If the chapter plan §12 names this section as a producer or consumer of a cross-section artifact, restate the artifact contract here verbatim **as it currently appears in the chapter plan**, including any `(normalized YYYY-MM-DD via <commit-sha>)` annotations from previous batches' producer artifact acceptance checkpoints. The writer is bound to this exact shape.
+If the chapter plan §12 names this section as a producer or consumer of a cross-section artifact, restate the artifact contract here verbatim **as it currently appears in the chapter plan**, including any per-producer `(producer <N>.<m>: accepted ... via <agreed-sha>)` / `(producer <N>.<m>: normalized ... via <agreed-sha>)` annotations from previous batches' producer artifact acceptance checkpoints. The writer is bound to this exact shape.
 
 §12 in the chapter plan is the single source of truth. Never derive contract shape from "as-built" producer files; always restate what §12 currently says.
 

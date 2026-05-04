@@ -141,16 +141,19 @@ Then run the **producer artifact acceptance checkpoint** below if §12 names thi
 
 Run after **every** AGREED commit on a section the chapter plan §12 names as a *producer*. Before any consumer section's brief is drafted, record exactly one outcome per artifact this section produces:
 
-- **(i) Accepted as-is** — producer matches §12 spec. **Annotate §12 in place** in the chapter plan with `(accepted YYYY-MM-DD via <commit-sha>)` on the producer's row, parallel to case (ii)'s normalization annotation. Without this annotation the `draft-batch` §12 invariant check has nothing to read at dispatch time. Then:
+- **(i) Accepted as-is** — producer matches §12 spec. **Annotate §12 in place** on the artifact row with `(producer <N>.<m>: accepted YYYY-MM-DD via <agreed-sha>)` — `<agreed-sha>` is the just-committed `agreed(<chapter>/<N>_<m>_<slug>):` SHA from the per-section deal-loop close, NEVER self-referential to the in-flight lockstep commit. Parallel to case (ii)'s normalization annotation. For multi-producer rows, append one clause per producer as each one closes (existing clauses remain; dispatch-time check verifies every producer in the row has its clause). Then:
   ```bash
+  AGREED_SHA=$(git rev-parse HEAD)   # capture the just-committed agreed(...) SHA
+  # edit _workflow/plans/<N>_<chapter_slug>_chapter_plan.md §12 to append the annotation
   git add _workflow/plans/<N>_<chapter_slug>_chapter_plan.md
-  git commit -m "lockstep(<chapter>): §12 acceptance — <artifact-id> — <one-line>"
+  git commit -m "lockstep(<chapter>): §12 acceptance — <artifact-id> producer <N>.<m> — <one-line>"
   ```
-  Also add a one-line entry to STATE.md `do_not_redo`.
-- **(ii) Accepted with normalization** — producer drifted *within* §12's allowed shape (a name, an ordering convention, an optional field). **Amend §12 in place** in the chapter plan with a `(normalized YYYY-MM-DD via <commit-sha>)` annotation noting the clarification. Then:
+  Also add a one-line entry to STATE.md `do_not_redo` as a session-recovery aid (not load-bearing — §12 row is the dispatch-time invariant).
+- **(ii) Accepted with normalization** — producer drifted *within* §12's allowed shape (a name, an ordering convention, an optional field). **Amend §12 in place** on the artifact row with `(producer <N>.<m>: normalized YYYY-MM-DD via <agreed-sha>)` annotation noting the clarification, and apply the schema clarification within the row's field columns. Per-producer for multi-producer rows. Then:
   ```bash
+  AGREED_SHA=$(git rev-parse HEAD)
   git add _workflow/plans/<N>_<chapter_slug>_chapter_plan.md
-  git commit -m "lockstep(<chapter>): §12 normalization — <artifact-id> — <one-line>"
+  git commit -m "lockstep(<chapter>): §12 normalization — <artifact-id> producer <N>.<m> — <one-line>"
   ```
   All future consumer briefs read the amended §12. Briefs NEVER derive contract shape from "as-built" producer state.
 - **(iii) Rejected** — producer violates §12 (required field missing / schema semantically broken) OR the drift changes consumer argumentative burden (adds, renames, redefines, or removes a required consumer obligation). Do NOT amend §12. **Reopen the producer's Phase-5 deal-loop**: revert the just-committed `agreed(...)` commit's frontmatter flip (set `workflow_status: draft` back) and re-dispatch the writer with a brief flagging the §12-violation defect. Downstream consumer briefs are blocked until the producer reaches AGREED again.
