@@ -56,7 +56,14 @@ Then **read** `$PLAN_PATH` and extract for Batch `$K`:
 
 **Verify each predecessor section is at `workflow_status: complete` (preferred) or `workflow_status: reviewing` with stable terminology** before dispatching this batch. If any predecessor is still `draft` or `planned`, ABORT — Batch `$K` is not ready.
 
-**§12 invariant check (HARD — fail closed).** For every section in Batch `$K` that is named in plan §12 as a *consumer* of a cross-section artifact, every producer of that artifact MUST already be at `workflow_status: reviewing` or `complete` AND the artifact's §12 row MUST carry a per-producer acceptance-checkpoint annotation for it: either `(producer <N>.<m>: accepted YYYY-MM-DD via <agreed-sha>)` (case i) or `(producer <N>.<m>: normalized YYYY-MM-DD via <agreed-sha>)` (case ii). For multi-producer rows, every producer named in the row must have its own clause; one producer's clause does not satisfy the others. If any producer is still `draft` / `planned` / absent, OR is missing its annotation clause, ABORT — Batch `$K` is not ready. This is belt-and-suspenders against a Phase-3 review that missed an intra-batch / out-of-order producer-consumer relationship; the primary defense is the Phase-3 codex sanity check, but dispatch-time verification fails closed.
+**§12 invariant check (HARD — fail closed).** For every section in Batch `$K` that is named in plan §12 as a *consumer* of a cross-section artifact, every producer of that artifact MUST satisfy all four:
+
+1. `workflow_status: reviewing` or `complete` (read from the producer file's frontmatter).
+2. Exactly one current annotation clause for it on the §12 row, in the form `(producer <N>.<m>: accepted YYYY-MM-DD via <agreed-sha>)` (case i) or `(producer <N>.<m>: normalized YYYY-MM-DD via <agreed-sha>)` (case ii). Multi-producer rows must have one clause per producer; one producer's clause does not satisfy the others.
+3. **Latest-`agreed-sha` match.** The `<agreed-sha>` in the producer's clause must equal the producer's latest `agreed(<chapter>/<producer-section>):` commit SHA, computed via `git log --oneline | grep "agreed(<chapter>/<producer-section>):" | head -1 | awk '{print $1}'`. A mismatch means the producer was reopened and re-AGREED but the §12 clause was not replaced — ABORT.
+4. **No duplicate live clauses.** No two clauses for the same producer on the same row. If two clauses exist, the older one is stale and was not replaced on re-AGREED — ABORT.
+
+If any producer fails any of (1)–(4), ABORT — Batch `$K` is not ready. Belt-and-suspenders against a Phase-3 review that missed an intra-batch / out-of-order producer-consumer relationship and against operator error in the producer's acceptance-checkpoint replacement step.
 
 Use the resolved section paths in step 6 (sentinel) and step 7 (dispatch); do not re-derive them later.
 

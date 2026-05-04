@@ -141,7 +141,7 @@ Then run the **producer artifact acceptance checkpoint** below if §12 names thi
 
 Run after **every** AGREED commit on a section the chapter plan §12 names as a *producer*. Before any consumer section's brief is drafted, record exactly one outcome per artifact this section produces:
 
-- **(i) Accepted as-is** — producer matches §12 spec. **Annotate §12 in place** on the artifact row with `(producer <N>.<m>: accepted YYYY-MM-DD via <agreed-sha>)` — `<agreed-sha>` is the just-committed `agreed(<chapter>/<N>_<m>_<slug>):` SHA from the per-section deal-loop close, NEVER self-referential to the in-flight lockstep commit. Parallel to case (ii)'s normalization annotation. For multi-producer rows, append one clause per producer as each one closes (existing clauses remain; dispatch-time check verifies every producer in the row has its clause). Then:
+- **(i) Accepted as-is** — producer matches §12 spec. **Annotate §12 in place** on the artifact row with `(producer <N>.<m>: accepted YYYY-MM-DD via <agreed-sha>)` — `<agreed-sha>` is the just-committed `agreed(<chapter>/<N>_<m>_<slug>):` SHA from the per-section deal-loop close, NEVER self-referential to the in-flight lockstep commit. Parallel to case (ii)'s normalization annotation. For multi-producer rows, append one clause per producer **the first time** each producer closes; **on re-AGREED of a producer, REPLACE its existing clause in place** with the new `<agreed-sha>` — never two live clauses for the same producer (a stale clause would satisfy the dispatch-time invariant after a reopen). Then:
   ```bash
   AGREED_SHA=$(git rev-parse HEAD)   # capture the just-committed agreed(...) SHA
   # edit _workflow/plans/<N>_<chapter_slug>_chapter_plan.md §12 to append the annotation
@@ -149,7 +149,7 @@ Run after **every** AGREED commit on a section the chapter plan §12 names as a 
   git commit -m "lockstep(<chapter>): §12 acceptance — <artifact-id> producer <N>.<m> — <one-line>"
   ```
   Also add a one-line entry to STATE.md `do_not_redo` as a session-recovery aid (not load-bearing — §12 row is the dispatch-time invariant).
-- **(ii) Accepted with normalization** — producer drifted *within* §12's allowed shape (a name, an ordering convention, an optional field). **Amend §12 in place** on the artifact row with `(producer <N>.<m>: normalized YYYY-MM-DD via <agreed-sha>)` annotation noting the clarification, and apply the schema clarification within the row's field columns. Per-producer for multi-producer rows. Then:
+- **(ii) Accepted with normalization** — producer drifted *within* §12's allowed shape (a name, an ordering convention, an optional field). **Amend §12 in place** on the artifact row with `(producer <N>.<m>: normalized YYYY-MM-DD via <agreed-sha>)` annotation noting the clarification, and apply the schema clarification within the row's field columns. Per-producer for multi-producer rows; on re-AGREED of a previously-annotated producer, REPLACE its existing clause in place (never two live clauses). Then:
   ```bash
   AGREED_SHA=$(git rev-parse HEAD)
   git add _workflow/plans/<N>_<chapter_slug>_chapter_plan.md
